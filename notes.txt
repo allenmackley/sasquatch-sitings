@@ -22,6 +22,8 @@ Sample Data Format: Tab Separated Values
 Description - Latitude - Longitude - Time - Tags
 
 Use MySQL 8 and new Geo Information Systems (GIS)
+Shouldn't need a separate library to help, because MySQL 8 should already have all functions needed
+https://www.youtube.com/watch?v=V8LNyiBACLo
 
 Use Node MySQL with connection pooling
 https://github.com/mysqljs/mysql

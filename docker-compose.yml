@@ -1,24 +1,34 @@
 version: '3'
 services:
-  # api:
-    # image:
-    # container_name:
-    # volumes:
-    # ports:
-    #   - "8080:80"
-    # depends_on:
-    #   - mysqldb
   mysqldb:
+    #For the mysqldb service, we don't use our our Dockerfile, instead we use a pre-built image on docker-hub
     image: mysql:5.7
     container_name: mysqldb
     command: mysqld --user=root --verbose
     volumes:
-       - ./schemadump.sql:/docker-entrypoint-initdb.d/schemadump.sql
+       - ./mysqldb/schemadump.sql:/docker-entrypoint-initdb.d/schemadump.sql
     ports:
-      - "3306:3306"
+      #Use port 4306 on my host machine so as not to conflict with mysql in my other virtual machines
+      - "4306:3306"
     environment:
       MYSQL_DATABASE: "test"
       MYSQL_USER: "test"
       MYSQL_PASSWORD: "test"
       MYSQL_ROOT_PASSWORD: "root"
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+  api:
+    #Use the dockerfile in our current directory to build the docker image. Will also run "npm start"
+    build: ./api
+    container_name: api
+    volumes:
+    #Mounts the working directory, ".", to /usr/src/app in the container
+    - ./api:/usr/src/app
+    #Same for the node_modules
+    - ./api/node_modules:/usr/src/app/node_modules
+    ports:
+    #exposes port 8081 on the host machine to port 80 on the docker container.
+    - "8081:80"
+    #    tty: true
+    depends_on:
+    #For the api container to run, the mysqldb container must be running first
+    - mysqldb

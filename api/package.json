@@ -4,9 +4,10 @@
   "description": "Thank you for your interest in joining the backend team at Jolt! We are a hard working bunch that is eager to learn and implement new technologies while also being willing to maintain legacy code.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
-  "author": "",
+  "author": "Allen Mackley",
   "license": "ISC",
   "dependencies": {
     "apollo-boost": "^0.1.16",
@@ -14,7 +15,12 @@
     "express": "^4.16.4",
     "express-graphql": "^0.6.12",
     "graphql": "^14.0.2",
+    "graphql-tools": "^4.0.2",
     "moment": "^2.22.2",
     "mysql": "^2.16.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/username/repository.git"
   }
 }
