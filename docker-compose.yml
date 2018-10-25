@@ -6,6 +6,7 @@ services:
     container_name: mysqldb
     command: mysqld --user=root --verbose
     volumes:
+       - ./mysqldb/stubs/sasquatch-data.tsv:/usr/src/app/sasquatch-data.tsv
        - ./mysqldb/schemadump.sql:/docker-entrypoint-initdb.d/schemadump.sql
     ports:
       #Use port 4306 on my host machine so as not to conflict with mysql in my other virtual machines
