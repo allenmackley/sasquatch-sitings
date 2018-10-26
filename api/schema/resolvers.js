@@ -1,49 +1,35 @@
+const pool = require('../db/pool');
+
 module.exports = {
     Query: {
         //return a single siting by sitingId
-        siting: (_, params) => {
-            return '';
+        siting: async(_, params) => {
+            const rows = await pool.query("SELECT * FROM siting WHERE id = ? LIMIT 1;", params.id);
+            return rows[0];
         },
         //just return all sitings
-        allSitings: (_, params) => {
-
+        allSitings: async(_, params) => {
+            return await pool.query("SELECT * FROM siting;");
         },
         //should take two siting ids and measure the distance
-        distanceBetweenSitings: (_, params) => {
-
+        distBetweenSitings: (_, params) => {
+            return 0.000;
         },
-        /*
-          * Should take:
-          *     Int sitingId
-          *     Float distanceInMiles
-          *     Int numClosest (optional)
-          *     Object tagsObject (optional)
-          *     Object dateObject (optional)
-          * Should use the distance to determine the geofence, then query for all sitings within that geofence
-          * If numClosest is provided, it should filter out the results of the geofence only by X number of the most closest
-          * tagsObject: {
-          *     tags: [...],
-          *     requireAll: true|false
-          * }
-          * dateObject: {
-          *     startDate: '...',
-          *     endDate: '...',
-          *     after: '...', //optional, use moment.js
-          *     before: '...' //optional, use moment.js
-          * }
-         */
+        //query sitings related to the id of the one provided using various search params
         relatedSitings: (_, params) => {
-
+            return [];
         }
     },
     Mutation: {
-        //update a single siting (location or description)
-        updateSiting: (_, params) => {
-            return '';
-        },
-        //update siting tags (receive new list of tags, and add or remove as necessary)
-        updateSitingTags: (_, params) => {
-
+        updateSiting: async(_, params) => {
+            const query  = `UPDATE siting SET ? WHERE id = ? LIMIT 1;`;
+            const update = await pool.query(query, [params, params.id]);
+            let response = null;
+            if (update.affectedRows) {
+                const select = await pool.query("SELECT * FROM siting WHERE id = ? LIMIT 1;", params.id);
+                response = select[0];
+            }
+            return response;
         }
     }
 };

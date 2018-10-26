@@ -11,7 +11,7 @@ services:
       - ./api/node_modules:/usr/src/app/node_modules
     ports:
       #exposes port 8081 on the host machine to port 80 on the docker container.
-      - "8081:80"
+      - "3001:3001"
       #    tty: true
     depends_on:
       #For the api container to run, the mysqldb container must be running first
