@@ -31,8 +31,9 @@ CREATE TABLE `siting` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `latitude` double(11,8) NOT NULL,
   `longitude` double(11,8) NOT NULL,
-  `time` datetime NOT NULL,
+  `time` datetime NULL DEFAULT NULL,
   `description` text,
+  `tags` text,
   PRIMARY KEY (`id`),
   KEY `lat` (`latitude`,`longitude`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -65,7 +66,8 @@ DROP TABLE IF EXISTS `tag`;
 CREATE TABLE `tag` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(25) NOT NULL DEFAULT '',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
@@ -78,7 +80,56 @@ CREATE TABLE `tag` (
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 
-LOAD DATA LOCAL INFILE '/usr/src/app/sasquatch-data.tsv' INTO TABLE siting
-  FIELDS TERMINATED BY '\t'
-  LINES TERMINATED BY '\n'
-  (description, latitude, longitude, time);
+#Strategy: Use MySQL to import the TSV file into the sitings table, including the tags. However, it would be best to de-normalize the tags into separate tables for easier lookup later. Doing this with MySQL is extremely difficult, so I'll use Node.js to help.
+
+# LOAD DATA LOCAL INFILE '/usr/src/app/sasquatch-data.tsv' INTO TABLE siting
+# FIELDS TERMINATED BY '\t'
+# LINES TERMINATED BY '\n'
+# (description, latitude, longitude, time, tags);
+
+#Create a siting_temp table to hold our data temporarily so we can format it more easily
+# DROP TABLE IF EXISTS `siting_temp`;
+# CREATE TEMPORARY TABLE `siting_temp` (
+#   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+#   `latitude` double(11,8) NOT NULL,
+#   `longitude` double(11,8) NOT NULL,
+#   `time` datetime NULL DEFAULT NULL,
+#   `description` text,
+#   `tags` text,
+#   PRIMARY KEY (`id`),
+#   KEY `lat` (`latitude`,`longitude`)
+# ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+#Loads data from our TSV file into our siting_temp table
+# LOAD DATA LOCAL INFILE '/usr/src/app/sasquatch-data.tsv' INTO TABLE siting
+#   FIELDS TERMINATED BY '\t'
+#   LINES TERMINATED BY '\n'
+#   (description, latitude, longitude, time, tags);
+#
+# #Will prevent an error when attempting to insert a null string like "0000-00-00 00:00:00" as a DATETIME
+# SET SQL_MODE='ALLOW_INVALID_DATES';
+#
+# #Insert everything but the tags into the permanent siting table
+# INSERT INTO `siting` (latitude, longitude, time, description)
+# SELECT latitude, longitude, time, description
+# FROM siting_temp;
+#
+# #We'll create another temporary table for the tags, and use a quick and dirty method of converting comma separated list of values into rows
+# DROP TEMPORARY TABLE IF EXISTS tag_temp;
+# CREATE TEMPORARY TABLE tag_temp (id INT AUTO_INCREMENT PRIMARY KEY, val CHAR(255));
+# #results in: INSERT INTO tag_temp (val) VALUES (tag1),(tag2),(tag3), etc.;
+# SET @sql = CONCAT("INSERT INTO tag_temp (id, val) VALUES ('",
+#   #Replaces all commas in the group concatenated list with surrounding parenthesis (), creating a list of parenthesised values, such as (value1),(value2), etc...
+#   REPLACE(
+#     #creates a comma separated list of all tags from each row
+#     (SELECT GROUP_CONCAT(tags) as data FROM siting_temp),
+#     ",",
+#     "'),('"
+#   ),
+# "');");
+# PREPARE stmt1 FROM @sql;
+# EXECUTE stmt1;
+#
+# #Will fill the tag table with all tags found in the infile
+# INSERT IGNORE INTO tag (name)
+# SELECT DISTINCT(val) from tag_temp WHERE val <> '';
