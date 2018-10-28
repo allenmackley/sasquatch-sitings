@@ -2,13 +2,13 @@
 ##How to test the API
 1. Start docker with `docker-compose up`  
 2. Open a second terminal  
-  a. Enter the bash for the api app  
-  `docker exec -it api bash`
+  a. Enter the bash for the api app.  
+  `docker exec -it api bash`  
   b. Run the import script to import stubs  
   `node import`
 2. Navigate to `http://localhost:3001/graphql`
 3. Enter the queries below  
-  a. Ids should be between 1 - 10,000, so if you delete a record, and want to test querying any other records, just use another id antwhere in that range.
+  a. Ids should be between 1 - 10,000, so if you delete a record, and want to test querying any other records, just use another id anywhere in that range.
 
 ##About sample data/stubs
 I've deleted the `import.sh` file and written my own import script so that I could parse and normalize the tags into their own tables.
@@ -103,23 +103,29 @@ mutation{
 ```
 
 ####Query the distance between two sitings
+Returns a float.
 ```
 {
-  distBetweenSitings(id1: 1, id2: 2){
-    
-  }
+  distBetweenSitings(id1: 1, id2: 2)
 }
 ```
 
 ####Query related sitings
+Everything below `withinDistanceInMeters` is optional and interchangable.
+
+`startDate` and `endDate` are parsed by `moment.js` and so can take multiple string formats.
 ````
 {
   relatedSitings(
     id: 2, 
-    distanceInMeters: 5000000, 
+    withinDistanceInMeters: 50000, 
     numClosest: 100, 
-    tags: "black,frightening,huge,mountains", 
-    mustHaveAllTags: true
+    tags: "mountains,frightening", 
+    mustHaveAllTags: true,
+    startDate: "July 20, 2018",
+    endDate: "2018-07-28",
+    daysBeforeSiting: 5,
+    daysAfterSiting: 5
   ){
     id
     latitude
@@ -138,3 +144,4 @@ mutation{
 ##Ways to improve further
 * MySQL 5.7 supports the `geo` type. This special type can be either a point or a shape and can have a special `SPACIAL KEY` index placed on it. This index can greatly improve MySQL performance.
 * MySQL 8 has some additional geo capabilities as well.
+* The SQL used in the `relatedSitings` query is quite large. Typically, writing a lot of logic into the SQL is harder to do and to maintain, but is more efficient because we prevent querying any data from the database that we aren't going to deliver to the client, saving memory, and perhaps gaining a speed boost by allowing the MySQL engine to do much of the sorting logic within indexed keys. Whether or not this is actually worth the trade-off for very complicated sorting algorithms is debatable, as it's much easier to write, update, and test this logic in JavaScript. I think in a production scenario, I would have taken a two-pronged approach, and used MySQL's speed and indexes to query data by the `geometry` type and `SPACIAL_KEY` indexing, and then used Node.js to handle filtering through dates, etc. However, I've left what I have done in the SQL there due to a time constraint and because it's a great demonstration.
