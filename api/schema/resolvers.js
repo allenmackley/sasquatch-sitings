@@ -4,6 +4,15 @@ const moment = require('moment');
 const common = {
     querySiting: async(id) => {
         return await pool.query("SELECT * FROM siting WHERE id = ? LIMIT 1;", id)[0];
+    },
+    useBoundPropNames: function(query, values) {
+        if (!values) return query;
+        return query.replace(/\:(\w+)/g, function (txt, key) {
+            if (values.hasOwnProperty(key)) {
+                return this.escape(values[key]);
+            }
+            return txt;
+        }.bind(this));
     }
 };
 module.exports = {
@@ -33,29 +42,35 @@ module.exports = {
         },
         //query sitings related to the id of the one provided using various search params
         relatedSitings: async(_, params) => {
-
             //This is the SRID used by Google Maps, which will help ensure good compatibility.
             const SRID = 4326;
-            // const query = `
-            //     SELECT * FROM siting
-            //     WHERE ST_Contains(geo, ST_GeomFromText(POINT(longitude, latitude), ?))
-            // `;
-            // const result = await pool.query(query, [SRID]);
-
             //Makes the LIMIT an option without needing to break up the query or add a conditional statement
             const numClosest = params.numClosest || 1000000;
-            const tags = params.tags.split(/,/);
-            const numRequiredTags = params.mustHaveAllTags ? tags.length : 1;
-            const searchTags = !!tags.length;
+            const id = params.id;
+            const withinDistanceInMeters = params.withinDistanceInMeters;
+            let tags = false;
+            let numRequiredTags = 1;
+            let ignoreTags = true;
+            let ignoreDateRangeFromPrimary = true;
+            if (params.tags) {
+                tags = params.tags.split(/,\s*/);
+                //Removes any whitespace tags
+                const cleanTags = tags.filter(el => el);
+                ignoreTags = ! cleanTags.length;
+            }
+            if (params.mustHaveAllTags) {
+                numRequiredTags = tags.length;
+            }
             let startDate = params.startDate || '1970-01-01 00:00:00';
             startDate     = moment(startDate).format('YYYY/MM/DD HH:mm:ss');
             let endDate   = params.endDate ? moment(params.endDate) : moment();
             endDate       = endDate.format('YYYY/MM/DD HH:mm:ss');
             const daysBeforeSiting = params.daysBeforeSiting || 0;
             const daysAfterSiting  = params.daysAfterSiting || 0;
-            // const secondsBeforeSiting = moment()
-            console.log('relatedSitings', endDate);
-            const query = `
+            if (daysBeforeSiting || daysAfterSiting) {
+                ignoreDateRangeFromPrimary = false;
+            }
+            const searchQuery = `
                 SELECT 
                   sRelated.id,
                   sRelated.latitude,
@@ -75,44 +90,52 @@ module.exports = {
                     WHERE sSub.id = sRelated.id
                   ) AS tags
                 FROM siting AS sRelated
-                JOIN siting AS sPrimary ON sPrimary.id = ?
+                JOIN siting AS sPrimary ON sPrimary.id = :id
                 JOIN siting_tag AS sTag ON sRelated.id = sTag.siting_id
                 JOIN tag ON sTag.tag_id = tag.id
                 WHERE ST_Distance_Sphere(
                   POINT(sRelated.longitude, sRelated.latitude),
                   POINT(sPrimary.longitude, sPrimary.latitude)
-                ) <= ? 
+                ) <= :withinDistanceInMeters 
                 AND sRelated.id != sPrimary.id
-                AND (? AND tag.name IN(?))
+                AND (:ignoreTags OR tag.name IN(:tags))
                 AND (
-                    (sRelated.time >= ?
+                    (
+                     sRelated.time >= :startDate
                       AND 
-                     sRelated.time <= ?)
+                     sRelated.time <= :endDate
+                    )
                   AND 
                     (
-                     sRelated.time <= DATE_ADD(sPrimary.time, INTERVAL ? DAY)
+                      :ignoreDateRangeFromPrimary
+                      OR 
+                      (sRelated.time >= DATE_SUB(sPrimary.time, INTERVAL :daysBeforeSiting DAY)
+                        AND sRelated.time <= sPrimary.time)
                       OR
-                     sRelated.time >= DATE_SUB(sPrimary.time, INTERVAL ? DAY))
+                      (sRelated.time <= DATE_ADD(sPrimary.time, INTERVAL :daysAfterSiting DAY)
+                        AND sRelated.time >= sPrimary.time)
+                    )
                 )
                 GROUP BY sRelated.id
-                HAVING count(*) = ?
+                HAVING count(*) = :numRequiredTags
                 ORDER BY distanceInMeters
-                LIMIT ?;
+                LIMIT :numClosest;
             `;
-            const rows = await pool.query(query, [
-                params.id,
-                params.distanceInMeters,
-                searchTags,
+            const poolConn = await pool.getConnection();
+            poolConn.connection.config.queryFormat = common.useBoundPropNames;
+            return await poolConn.query(searchQuery, {
+                id,
+                withinDistanceInMeters,
+                ignoreTags,
                 tags,
                 startDate,
                 endDate,
+                ignoreDateRangeFromPrimary,
                 daysBeforeSiting,
                 daysAfterSiting,
                 numRequiredTags,
                 numClosest
-            ]);
-            console.log('rows', rows[0]);
-            return rows;
+            });
         }
     },
     Mutation: {

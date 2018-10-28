@@ -38,7 +38,7 @@ type Query {
   distBetweenSitings(id1: Int!, id2: Int!): Float,
   relatedSitings(
     id: Int!, 
-    distanceInMeters: Float!, 
+    withinDistanceInMeters: Float!, 
     numClosest: Int, 
     tags: String,
     mustHaveAllTags: Boolean,
