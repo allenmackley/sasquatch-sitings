@@ -31,10 +31,12 @@ CREATE TABLE `siting` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `latitude` double(11,8) NOT NULL,
   `longitude` double(11,8) NOT NULL,
+  `geo` geometry NOT NULL,
   `time` datetime NULL DEFAULT NULL,
   `description` text,
   `tags` text,
   PRIMARY KEY (`id`),
+  SPATIAL KEY `geo` (geo),
   KEY `lat` (`latitude`,`longitude`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

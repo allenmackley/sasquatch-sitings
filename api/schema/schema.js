@@ -1,11 +1,13 @@
 const makeExecutableSchema = require('graphql-tools').makeExecutableSchema;
 const resolvers = require('./resolvers');
+//TODO: add a couple of input types on relatedStings to group together options
+//https://graphql.org/learn/schema/
 const typeDefs = `
 type Tag {
   id: ID!
   name: String!
 }
-type Siting {
+interface SitingInterface {
   id: ID!
   latitude: Float!
   longitude: Float!
@@ -13,28 +15,55 @@ type Siting {
   description: String!
   tags: String
 }
+type Siting implements SitingInterface {
+  id: ID!
+  latitude: Float!
+  longitude: Float!
+  time: String!
+  description: String!
+  tags: String
+}
+type RelatedSiting implements SitingInterface {
+  id: ID!
+  latitude: Float!
+  longitude: Float!
+  time: String!
+  description: String!
+  tags: String
+  distanceInMeters: Float!
+}
 type Query {
   siting(id: Int!): Siting,
-  allSitings: [Siting],
+  allSitings: [Siting!],
   distBetweenSitings(id1: Int!, id2: Int!): Float,
   relatedSitings(
     id: Int!, 
-    distanceInMiles: Float!, 
+    distanceInMeters: Float!, 
     numClosest: Int, 
     tags: String,
     mustHaveAllTags: Boolean,
     startDate: String,
     endDate: String,
-    dateAfterSiting: String,
-    dateBeforeSiting: String
-  ): [Siting]
+    daysBeforeSiting: Int,
+    daysAfterSiting: Int
+  ): [RelatedSiting]
 }
 type Mutation {
+  createSiting(
+    latitude: Float!
+    longitude: Float!
+    description: String!
+    time: String!
+    tags: String!
+  ): Siting,
   updateSiting(
     id: Int!
     latitude: Float
     longitude: Float
     description: String
+  ): Siting,
+  deleteSiting(
+    id: Int!
   ): Siting
 }
 schema {
@@ -42,5 +71,4 @@ schema {
   mutation: Mutation
 }
 `;
-
 module.exports = makeExecutableSchema({typeDefs, resolvers});
