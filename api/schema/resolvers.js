@@ -1,6 +1,7 @@
 const pool   = require('../db/pool');
 const moment = require('moment');
-const SasquatchImporter = require('../db/SasquatchImporter');
+const SitingInserter = require('../db/SitingInserter');
+const SitingUpdater  = require('../db/SitingUpdater');
 //Any common methods can be put here to keep my code as DRY as possible.
 const common = {
     querySiting: async(id) => {
@@ -163,32 +164,33 @@ module.exports = {
         createSiting: async(_, params) => {
             params.time    = moment(params.time).toDate();
             const conn     = await pool.getConnection();
-            const importer = new SasquatchImporter(conn);
-            const insert   = await importer.insertSiting(params);
+            const inserter = new SitingInserter(conn);
+            const insert   = await inserter.insertSiting(params);
             const insertId = insert.insertId;
             let siting     = null;
             if (insertId) {
                 siting = await common.querySiting(insertId);
                 siting.tags = params.tags;
-                await importer.insertTagsFor(siting);
+                await inserter.insertTagsFor(siting);
             }
             return siting;
         },
         updateSiting: async(_, params) => {
             params.time    = moment(params.time).toDate();
             const conn     = await pool.getConnection();
-            const importer = new SasquatchImporter(conn);
-            const update   = await importer.updateSiting(params);
+            const updater  = new SitingUpdater(conn);
+            const update   = await updater.updateSiting(params);
             let siting     = null;
             if (update.affectedRows) {
                 siting = await common.querySiting(params.id);
                 siting.tags = params.tags;
                 console.log('updateSiting', siting);
-                await importer.updateTagsFor(siting);
+                await updater.updateTagsFor(siting);
             }
             return siting;
         },
         deleteSiting: async(_, params) => {
+            //SQL is set to cascade delete so that siting_tag entries are deleted also
             const result = await pool.query("DELETE FROM siting WHERE id = ? LIMIT 1;", params.id);
             console.log('result', result);
             let id = "Couldn't find record. Siting may already be deleted.";

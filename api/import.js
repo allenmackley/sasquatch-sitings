@@ -2,11 +2,11 @@ const pool     = require('./db/pool');
 const csv      = require('csv-streamify');
 const through2 = require('through2');
 const fs       = require('fs');
-const SasquatchImporter = require('./db/SasquatchImporter');
+const SitingInserter = require('./db/SitingInserter');
 
 pool.getConnection().then(async(conn) => {
-    const importer = new SasquatchImporter(conn);
-    await importer.clearTables();
+    const inserter = new SitingInserter(conn);
+    await inserter.clearTables();
 
     const all = [];
     const parser = csv({
@@ -32,10 +32,10 @@ pool.getConnection().then(async(conn) => {
         .on('end', async() => {
             console.log("Processing imports...");
             for (let i = 0; i < all.length; i++) {
-                await importer.insertSiting(all[i]);
+                await inserter.insertSiting(all[i]);
             }
-            await importer.insertTagsAll();
-            importer.conn.release();
+            await inserter.insertTagsAll();
+            inserter.conn.release();
             console.log('DONE');
             pool.end((err) => {
                 if (err) throw err;
