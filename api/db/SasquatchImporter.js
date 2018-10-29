@@ -17,12 +17,37 @@ module.exports = class SasquatchImporter {
             console.log('Deleted siting_tag');
         }
     }
+    updateSiting(data) {
+        const SRID  = 4326;
+        const query = `
+          UPDATE siting
+          SET latitude    = ?,
+              longitude   = ?,
+              geo         = ST_GeomFromText(?, ${SRID}),
+              time        = ?,
+              description = ?,
+              tags        = ?
+          WHERE id = ? 
+          LIMIT 1;
+        `;
+        const updateData = [
+            data.latitude,
+            data.longitude,
+            `POINT(${data.longitude} ${data.latitude})`,
+            data.time,
+            data.description,
+            data.tags,
+            data.id
+        ];
+        return this.conn.query(query, updateData);
+    }
     insertSiting(data) {
+        const SRID = 4326;
         const insertQuery = `
           INSERT IGNORE INTO siting
           SET latitude    = ?,
               longitude   = ?,
-              geo         = ST_GeomFromText(?, 4326),
+              geo         = ST_GeomFromText(?, ${SRID}),
               time        = ?,
               description = ?,
               tags        = ?;
@@ -67,16 +92,23 @@ module.exports = class SasquatchImporter {
         });
         return tagInserts;
     }
-    async insertTags() {
-        //Now that sitings are loaded into MySQL, select them each
-        const sitings = await this.conn.query("SELECT id, tags FROM siting;");
+    async insertTags(sitings) {
         //Create a list of unique tags, ignoring duplicates
         let tagsList = this.uniqueTagList(sitings);
-        //Wrap each tag in an array so we can insert it below
         tagsList = tagsList.map(tag => [tag]);
         //Insert unique tags into tag table. Table has a unique key on "name", preventing duplicates, so ignore any duplicate errors and only insert unique values.
         await this.conn.query("INSERT IGNORE INTO tag (name) VALUES ?;", [tagsList]);
         console.log("Inserted tags");
+        await this.insertTagsJoin(sitings);
+    }
+    async updateTags(sitings) {
+        for (let i = 0; i < sitings.length; i++) {
+            const siting = sitings[i];
+            await this.conn.query("DELETE FROM siting_tag WHERE siting_id = ?;", siting.id);
+        }
+        await this.insertTags(sitings);
+    }
+    async insertTagsJoin(sitings) {
         //Select our unique tags that were inserted, each now has an id
         const allTags = await this.conn.query("SELECT * FROM tag;");
         //Now that we have tag ids, loop through sitings again and create tag inserts for the many-to-many table with the tag id and siting id for each
@@ -84,5 +116,16 @@ module.exports = class SasquatchImporter {
         //Insert into the many-to-many table
         await this.conn.query("INSERT INTO siting_tag (siting_id, tag_id) VALUES ?;", [tagInserts]);
         console.log("Inserted siting_tags");
+    }
+    async insertTagsFor(siting) {
+        await this.insertTags([siting]);
+    }
+    async insertTagsAll() {
+        //Now that sitings are loaded into MySQL, select them each
+        const sitings = await this.conn.query("SELECT id, tags FROM siting;");
+        await this.insertTags(sitings);
+    }
+    async updateTagsFor(siting) {
+        await this.updateTags([siting]);
     }
 }

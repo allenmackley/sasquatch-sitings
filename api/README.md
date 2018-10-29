@@ -108,8 +108,8 @@ Before the insert into the database, the time is parsed through the moment.js li
 
 ####Update a siting
 ```
-mutation ($id: Int!, $lat: Float, $lon: Float, $desc: String) {
-  updateSiting(id: $id, latitude: $lat, longitude: $lon, description: $desc) {
+mutation ($id: Int!, $lat: Float, $lon: Float, $desc: String, $tags: String) {
+  updateSiting(id: $id, latitude: $lat, longitude: $lon, description: $desc, tags: $tags) {
     id,
     latitude,
     longitude,
@@ -123,7 +123,8 @@ mutation ($id: Int!, $lat: Float, $lon: Float, $desc: String) {
   "id": 1,
   "lat": 1.234,
   "lon": 2.567,
-  "desc": "New text"
+  "desc": "New text",
+  "tags": "frightening,terrifying"
 }
 ```
 

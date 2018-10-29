@@ -34,7 +34,7 @@ pool.getConnection().then(async(conn) => {
             for (let i = 0; i < all.length; i++) {
                 await importer.insertSiting(all[i]);
             }
-            await importer.insertTags();
+            await importer.insertTagsAll();
             importer.conn.release();
             console.log('DONE');
             pool.end((err) => {

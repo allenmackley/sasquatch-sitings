@@ -59,6 +59,7 @@ type Mutation {
     latitude: Float
     longitude: Float
     description: String
+    tags: String
   ): Siting,
   deleteSiting(
     id: Int!

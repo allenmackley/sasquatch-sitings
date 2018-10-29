@@ -1,5 +1,6 @@
 const pool   = require('../db/pool');
 const moment = require('moment');
+const SasquatchImporter = require('../db/SasquatchImporter');
 //Any common methods can be put here to keep my code as DRY as possible.
 const common = {
     querySiting: async(id) => {
@@ -160,16 +161,32 @@ module.exports = {
     },
     Mutation: {
         createSiting: async(_, params) => {
-            params.time = moment(params.time).toDate();
-            const query = `INSERT INTO siting SET ?;`;
-            const insert = await pool.query(query, params);
-            return insert.insertId ? common.querySiting(insert.insertId) : null;
+            params.time    = moment(params.time).toDate();
+            const conn     = await pool.getConnection();
+            const importer = new SasquatchImporter(conn);
+            const insert   = await importer.insertSiting(params);
+            const insertId = insert.insertId;
+            let siting     = null;
+            if (insertId) {
+                siting = await common.querySiting(insertId);
+                siting.tags = params.tags;
+                await importer.insertTagsFor(siting);
+            }
+            return siting;
         },
         updateSiting: async(_, params) => {
-            params.time = moment(params.time).toDate();
-            const query  = `UPDATE siting SET ? WHERE id = ? LIMIT 1;`;
-            const update = await pool.query(query, [params, params.id]);
-            return update.affectedRows ? common.querySiting(params.id) : null;
+            params.time    = moment(params.time).toDate();
+            const conn     = await pool.getConnection();
+            const importer = new SasquatchImporter(conn);
+            const update   = await importer.updateSiting(params);
+            let siting     = null;
+            if (update.affectedRows) {
+                siting = await common.querySiting(params.id);
+                siting.tags = params.tags;
+                console.log('updateSiting', siting);
+                await importer.updateTagsFor(siting);
+            }
+            return siting;
         },
         deleteSiting: async(_, params) => {
             const result = await pool.query("DELETE FROM siting WHERE id = ? LIMIT 1;", params.id);
