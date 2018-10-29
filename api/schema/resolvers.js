@@ -47,18 +47,17 @@ module.exports = {
         },
         //should take two siting ids and measure the distance
         distBetweenSitings: async(_, params) => {
+            console.log('params', params);
             const distanceQuery = `
-                SELECT ST_Distance_Sphere(
-                    POINT(s1.longitude, s1.latitude),
-                    POINT(s2.longitude, s2.latitude)
-                ) AS distInMeters
+                SELECT ST_Distance_Sphere(s1.geo, s2.geo) AS distInMeters
                 FROM siting AS s1
                 JOIN siting AS s2 ON s2.id = ?
                 WHERE s1.id = ? 
                 LIMIT 1;
             `;
             const results = await pool.query(distanceQuery, [params.id1, params.id2]);
-            return results[0].distInMeters;
+            console.log('results', results);
+            return results ? results[0].distInMeters : [];
         },
         //query sitings related to the id of the one provided using various search params
         relatedSitings: async(_, params) => {
@@ -97,10 +96,7 @@ module.exports = {
                   sRelated.longitude,
                   DATE_FORMAT(sRelated.time, '%Y-%m-%d %h:%m:%s') AS time,
                   sRelated.description,
-                  ST_Distance_Sphere(
-                    POINT(sRelated.longitude, sRelated.latitude),
-                    POINT(sPrimary.longitude, sPrimary.latitude)
-                  ) AS distanceInMeters,
+                  ST_Distance_Sphere(sRelated.geo, sPrimary.geo) AS distanceInMeters,
                   # The subquery gives us a comma-separated list of all tags for each siting search result 
                   (
                     SELECT 
@@ -116,10 +112,7 @@ module.exports = {
                 # We JOIN on the tags again here because we can't GROUP_CONCAT the tags and use them individually for filters at the same time
                 JOIN siting_tag AS sTag ON sRelated.id = sTag.siting_id
                 JOIN tag ON sTag.tag_id = tag.id
-                WHERE ST_Distance_Sphere(
-                  POINT(sRelated.longitude, sRelated.latitude),
-                  POINT(sPrimary.longitude, sPrimary.latitude)
-                ) <= :withinDistanceInMeters 
+                WHERE ST_Distance_Sphere(sRelated.geo, sPrimary.geo) <= :withinDistanceInMeters 
                 AND sRelated.id != sPrimary.id
                 AND (:ignoreTags OR tag.name IN(:tags))
                 # This AND will always evaluate to TRUE because if the startDate isn't provided in the params, it is default to the Unix Epoch at the start of the method, and if end date is not provided, it is defaulted to NOW.

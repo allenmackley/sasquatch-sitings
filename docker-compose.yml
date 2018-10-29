@@ -16,6 +16,8 @@ services:
     depends_on:
       #For the api container to run, the mysqldb container must be running first
       - mysqldb
+    environment:
+      - NODE_ENV=development
   mysqldb:
     #For the mysqldb service, we don't use our our Dockerfile, instead we use a pre-built image on docker-hub
     image: mysql:5.7

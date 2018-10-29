@@ -1,7 +1,5 @@
 const makeExecutableSchema = require('graphql-tools').makeExecutableSchema;
 const resolvers = require('./resolvers');
-//TODO: add a couple of input types on relatedStings to group together options
-//https://graphql.org/learn/schema/
 const typeDefs = `
 type Tag {
   id: ID!

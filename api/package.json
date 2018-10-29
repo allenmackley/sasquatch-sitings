@@ -1,8 +1,7 @@
 {
   "name": "sasquatch-sitings",
   "version": "1.0.0",
-  "description": "Thank you for your interest in joining the backend team at Jolt! We are a hard working bunch that is eager to learn and implement new technologies while also being willing to maintain legacy code.",
-  "main": "index.js",
+  "description": "An implimentation of the Sasquatch Siting assessment.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js"
@@ -10,8 +9,8 @@
   "author": "Allen Mackley",
   "license": "ISC",
   "dependencies": {
-    "apollo-boost": "^0.1.16",
     "cors": "^2.8.4",
+    "csv-streamify": "^4.0.0",
     "express": "^4.16.4",
     "express-graphql": "^0.6.12",
     "graphql": "^14.0.2",
@@ -23,6 +22,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/username/repository.git"
+    "url": "git@bitbucket.org:AcousticAce/sasquatch-sitings.git"
   }
 }
